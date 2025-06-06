@@ -114,6 +114,12 @@
         <button class="spin-btn" id="spinBtn">Spin</button>
         <div class="winner" id="winner"></div>
     </div>
+    <div id="disclaimer" style="display:none; color:#888; font-size:0.95em; text-align:center; margin-top:18px; opacity:0; transition:opacity 0.7s;">
+        Don't trust me? See the source code at
+        <a href="https://github.com/joerepay/spinner-of-doom" target="_blank" style="color:#f5c518;text-decoration:underline;">https://github.com/joerepay/spinner-of-doom</a>
+        <br>
+        <span id="biasNote"></span>
+    </div>
     <script>
         // Parse names from query string
         function getNamesFromQuery() {
@@ -229,6 +235,7 @@
         }
 
         let spinning = false;
+        let disclaimerTimeout = null;
         document.getElementById('spinBtn').addEventListener('click', function () {
             if (spinning || names.length === 0) return;
             spinning = true;
@@ -236,7 +243,20 @@
             spinWheel(names, function (winnerIndex) {
                 spinning = false;
                 document.getElementById('winner').textContent = `🎉 ${names[winnerIndex]} wins the Spinner of DOOM! See you next week!`;
+                // Update disclaimer with winner's name, on next line
+                document.getElementById('biasNote').textContent = `I promise it's definitely not biased towards ${names[winnerIndex]}`;
             });
+            // Hide disclaimer and show after 5 seconds with fade-in
+            const disclaimer = document.getElementById('disclaimer');
+            disclaimer.style.display = 'none';
+            disclaimer.style.opacity = 0;
+            if (disclaimerTimeout) clearTimeout(disclaimerTimeout);
+            disclaimerTimeout = setTimeout(function() {
+                disclaimer.style.display = 'block';
+                // Force reflow for transition
+                void disclaimer.offsetWidth;
+                disclaimer.style.opacity = 1;
+            }, 5000);
         });
     </script>
 </body>

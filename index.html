@@ -1,3 +1,244 @@
-Spinner of DOOM! 
+<!DOCTYPE html>
+<html lang="en">
 
-Under construction.
+<head>
+    <meta charset="UTF-8">
+    <title>Spinner of Doom</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background: #181a20;
+            color: #f5f6fa;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .container {
+            margin-top: 40px;
+            background: #23262f;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            padding: 32px 24px 24px 24px;
+            max-width: 420px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .names-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 32px;
+            justify-content: center;
+        }
+
+        .name-chip {
+            background: #282c34;
+            border: 1px solid #353945;
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-size: 1.1em;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+            margin: 2px 0;
+        }
+
+        .wheel-container {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        #wheel {
+            background: #23262f;
+            border-radius: 50%;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 4px #353945;
+            display: block;
+        }
+
+        .pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -110%);
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-bottom: 32px solid #f5c518;
+            filter: drop-shadow(0 2px 4px #0008);
+            z-index: 2;
+        }
+
+        .spin-btn {
+            background: linear-gradient(90deg, #f5c518 0%, #f76d1a 100%);
+            color: #23262f;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 36px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 12px rgba(245, 197, 24, 0.18);
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 10px;
+        }
+
+        .spin-btn:active {
+            transform: scale(0.97);
+        }
+
+        .winner {
+            margin-top: 24px;
+            font-size: 1.5em;
+            color: #f5c518;
+            text-shadow: 0 2px 8px #000a;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="names-list" id="namesList"></div>
+        <div class="wheel-container">
+            <canvas id="wheel" width="340" height="340"></canvas>
+            <div class="pointer"></div>
+        </div>
+        <button class="spin-btn" id="spinBtn">Spin</button>
+        <div class="winner" id="winner"></div>
+    </div>
+    <script>
+        // Parse names from query string
+        function getNamesFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const names = params.get('names');
+            if (!names) return ["Specify", "Names", "In", "Querystring", "Called", "Names"];
+            return names.split(',').map(n => n.trim()).filter(n => n.length > 0);
+        }
+
+        // Display names as chips
+        function displayNames(names) {
+            const list = document.getElementById('namesList');
+            list.innerHTML = '';
+            names.forEach(name => {
+                const chip = document.createElement('div');
+                chip.className = 'name-chip';
+                chip.textContent = name;
+                list.appendChild(chip);
+            });
+        }
+
+        // Draw the wheel
+        function drawWheel(names, angleOffset = 0, highlightIndex = null) {
+            const canvas = document.getElementById('wheel');
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const radius = size / 2;
+            ctx.clearRect(0, 0, size, size);
+
+            const colors = [
+                '#f5c518', '#f76d1a', '#2d9cdb', '#27ae60', '#9b59b6', '#e74c3c', '#16a085', '#e67e22', '#2980b9', '#fd79a8'
+            ];
+            const n = names.length;
+            const anglePer = 2 * Math.PI / n;
+
+            for (let i = 0; i < n; i++) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(radius, radius);
+                ctx.arc(radius, radius, radius - 8, angleOffset + i * anglePer, angleOffset + (i + 1) * anglePer, false);
+                ctx.closePath();
+                ctx.fillStyle = highlightIndex === i ? '#fff' : colors[i % colors.length];
+                ctx.globalAlpha = highlightIndex === i ? 0.92 : 0.85;
+                ctx.shadowColor = "#000";
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.restore();
+
+                // Draw border
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(radius, radius);
+                ctx.arc(radius, radius, radius - 8, angleOffset + i * anglePer, angleOffset + (i + 1) * anglePer, false);
+                ctx.closePath();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = "#353945";
+                ctx.stroke();
+                ctx.restore();
+
+                // Draw text
+                ctx.save();
+                ctx.translate(radius, radius);
+                ctx.rotate(angleOffset + (i + 0.5) * anglePer);
+                ctx.textAlign = "right";
+                ctx.font = "bold 1.1em Segoe UI, Arial";
+                ctx.fillStyle = "#23262f";
+                ctx.shadowColor = "#fff8";
+                ctx.shadowBlur = 2;
+                ctx.fillText(names[i], radius - 32, 8);
+                ctx.restore();
+            }
+        }
+
+        // Spin logic
+        function spinWheel(names, callback) {
+            const n = names.length;
+            const anglePer = 2 * Math.PI / n;
+            const winnerIndex = Math.floor(Math.random() * n);
+            const extraSpins = 5;
+            const finalAngle = (3 * Math.PI / 2) - (winnerIndex + 0.5) * anglePer;
+            const totalRotation = extraSpins * 2 * Math.PI + finalAngle;
+            let start = null;
+            let duration = 3200 + Math.random() * 600;
+            let lastAngle = 0;
+
+            function animate(ts) {
+                if (!start) start = ts;
+                const elapsed = ts - start;
+                const t = Math.min(elapsed / duration, 1);
+                // Ease out cubic
+                const ease = 1 - Math.pow(1 - t, 3);
+                const angle = ease * totalRotation;
+                drawWheel(names, angle, null);
+                lastAngle = angle;
+                if (t < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    drawWheel(names, angle, winnerIndex);
+                    callback(winnerIndex);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // Main
+        const names = getNamesFromQuery();
+        if (names.length === 0) {
+            document.getElementById('namesList').innerHTML = '<span style="color:#f76d1a;">No names provided.<br>Use <b>?names=Alice,Bob,Charlie</b> in the URL.</span>';
+            document.getElementById('spinBtn').disabled = true;
+        } else {
+            displayNames(names);
+            drawWheel(names);
+        }
+
+        let spinning = false;
+        document.getElementById('spinBtn').addEventListener('click', function () {
+            if (spinning || names.length === 0) return;
+            spinning = true;
+            document.getElementById('winner').textContent = '';
+            spinWheel(names, function (winnerIndex) {
+                spinning = false;
+                document.getElementById('winner').textContent = `🎉 ${names[winnerIndex]} wins the Spinner of DOOM! See you next week!`;
+            });
+        });
+    </script>
+</body>
+
+</html>

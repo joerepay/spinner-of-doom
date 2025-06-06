@@ -61,6 +61,15 @@
             display: block;
         }
 
+        #winnerOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+        }
+
         .pointer {
             position: absolute;
             top: 50%;
@@ -107,8 +116,10 @@
 <body>
     <div class="container">
         <div class="names-list" id="namesList"></div>
-        <div class="wheel-container">
+        <div class="wheel-container" style="position:relative;">
             <canvas id="wheel" width="340" height="340"></canvas>
+            <canvas id="winnerOverlay" width="340" height="340"
+                style="position:absolute;top:0;left:0;pointer-events:none;z-index:10;display:none;"></canvas>
             <div class="pointer"></div>
         </div>
         <button class="spin-btn" id="spinBtn">Spin</button>
@@ -208,6 +219,115 @@
             }
         }
 
+        // Cinematic winner overlay animation
+        function showWinnerOverlay(name) {
+            const overlay = document.getElementById('winnerOverlay');
+            const ctx = overlay.getContext('2d');
+            // Roll out the red carpet—make the overlay visible!
+            overlay.style.display = 'block';
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+            const centerX = overlay.width / 2;
+            const centerY = overlay.height / 2;
+            const baseFontSize = 36;
+            const maxFontSize = 90;
+            const duration = 2100;
+            // No fade out—let the winner bask in their glory until the next spin
+            let start = null;
+
+            // Precompute the total spin so we can interpolate smoothly to 0 at the end
+            // (Math: because we want the winner's name to stop upright, not tipsy)
+            const totalSpin = Math.PI * 2 * 0.7; // matches previous max spin
+
+            function animate(ts) {
+                if (!start) start = ts;
+                const elapsed = ts - start;
+                ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+                // Animation progress (from 0 to 1, like your anticipation)
+                let t = Math.min(elapsed / duration, 1);
+
+                // Font size: dramatic entrance, then settle down
+                let fontSize = baseFontSize + (maxFontSize - baseFontSize) * Math.sin(Math.PI * Math.min(t, 0.7));
+                // Spin: ease out so the winner doesn't get motion sickness
+                let spin;
+                if (elapsed < duration) {
+                    const ease = 1 - Math.pow(1 - t, 3);
+                    spin = totalSpin * (1 - ease);
+                } else {
+                    spin = 0;
+                }
+                // Glow: because every winner deserves to shine (literally)
+                let glow = 32 + 48 * Math.sin(Math.PI * Math.min(t, 0.7));
+                // No fade out—let the winner gloat
+                let alpha = 1;
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(spin);
+                // 3D skew: because flat text is for spreadsheets
+                let skew = 0.25 * Math.sin(Math.PI * t);
+                ctx.transform(1, skew, skew, 1, 0, 0);
+
+                ctx.font = `bold ${fontSize}px 'Segoe UI', Arial, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Black glow behind everything—because sometimes you need a little darkness to see the light
+                ctx.save();
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = glow * 1.2;
+                ctx.globalAlpha = alpha * 0.85;
+                ctx.fillStyle = '#000';
+                ctx.fillText(name, 0, 0);
+                ctx.restore();
+
+                // Shadow behind text—winner's aura (still here for extra depth)
+                ctx.save();
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 18;
+                ctx.globalAlpha = alpha * 0.8;
+                ctx.fillStyle = '#000';
+                ctx.fillText(name, 0, 0);
+                ctx.restore();
+
+                // Outline—because even winners need boundaries
+                ctx.save();
+                ctx.lineWidth = Math.max(4, fontSize * 0.09);
+                ctx.strokeStyle = '#181a20';
+                ctx.globalAlpha = alpha;
+                ctx.strokeText(name, 0, 0);
+                ctx.restore();
+
+                // Glowing main text—shine bright like a diamond
+                ctx.shadowColor = '#f5c518';
+                ctx.shadowBlur = glow;
+                ctx.fillStyle = '#fff';
+                ctx.globalAlpha = alpha;
+                ctx.fillText(name, 0, 0);
+
+                // "WINNER!" label—just in case they missed the memo
+                ctx.shadowBlur = 0;
+                ctx.font = `bold ${Math.floor(fontSize/2.5)}px 'Segoe UI', Arial, sans-serif`;
+                ctx.fillStyle = '#f76d1a';
+                ctx.globalAlpha = alpha * 0.85;
+                ctx.strokeStyle = '#181a20';
+                ctx.lineWidth = 3;
+                ctx.strokeText('WINNER!', 0, -fontSize * 0.9);
+                ctx.fillText('WINNER!', 0, -fontSize * 0.9);
+
+                ctx.restore();
+
+                if (elapsed < duration) {
+                    // Keep the drama going
+                    requestAnimationFrame(animate);
+                }
+                // else: leave overlay up until next spin, because winners deserve the spotlight
+            }
+            requestAnimationFrame(animate);
+        }
+
         // Spin logic
         function spinWheel(names, callback) {
             const n = names.length;
@@ -240,8 +360,9 @@
                     // Keep spinning, keep winning (or not)
                     requestAnimationFrame(animate);
                 } else {
-                    // Winner winner, chicken dinner!
                     drawWheel(names, angle, winnerIndex);
+                    // Cinematic winner overlay!
+                    showWinnerOverlay(names[winnerIndex]);
                     callback(winnerIndex);
                 }
             }
@@ -269,6 +390,8 @@
             spinning = true;
             // Clear out last week's champion
             document.getElementById('winner').textContent = '';
+            // Hide winner overlay if visible—time for a new champion!
+            document.getElementById('winnerOverlay').style.display = 'none';
             spinWheel(names, function (winnerIndex) {
                 spinning = false;
                 // Announce the winner with all the fanfare of a JavaScript alert (but prettier)

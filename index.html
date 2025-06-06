@@ -123,16 +123,23 @@
     <script>
         // Parse names from query string
         function getNamesFromQuery() {
+            // Grab those juicy URL params
             const params = new URLSearchParams(window.location.search);
+            // Extract the 'names' param, because that's what we're spinning for
             const names = params.get('names');
+            // If you forgot to add names, enjoy your empty wheel of sadness
             if (!names) return [];
+            // Split by commas, trim the fat, and filter out the blanks—no freeloaders allowed
             return names.split(',').map(n => n.trim()).filter(n => n.length > 0);
         }
 
         // Display names as chips
         function displayNames(names) {
+            // Find the VIP section for name chips
             const list = document.getElementById('namesList');
+            // Clear out any previous guests
             list.innerHTML = '';
+            // Roll out the red carpet for each name
             names.forEach(name => {
                 const chip = document.createElement('div');
                 chip.className = 'name-chip';
@@ -143,24 +150,30 @@
 
         // Draw the wheel
         function drawWheel(names, angleOffset = 0, highlightIndex = null) {
+            // Get the canvas and its magical 2D context
             const canvas = document.getElementById('wheel');
             const ctx = canvas.getContext('2d');
             const size = canvas.width;
             const radius = size / 2;
+            // Wipe the slate clean—no cheating!
             ctx.clearRect(0, 0, size, size);
 
+            // A rainbow of questionable taste
             const colors = [
                 '#f5c518', '#f76d1a', '#2d9cdb', '#27ae60', '#9b59b6', '#e74c3c', '#16a085', '#e67e22', '#2980b9', '#fd79a8'
             ];
             const n = names.length;
+            // Each slice gets a fair share of the pie (math pun intended)
             const anglePer = 2 * Math.PI / n;
 
             for (let i = 0; i < n; i++) {
                 ctx.save();
                 ctx.beginPath();
                 ctx.moveTo(radius, radius);
+                // Draw a slice of destiny
                 ctx.arc(radius, radius, radius - 8, angleOffset + i * anglePer, angleOffset + (i + 1) * anglePer, false);
                 ctx.closePath();
+                // Highlight the chosen one, otherwise pick a color from the questionable palette
                 ctx.fillStyle = highlightIndex === i ? '#fff' : colors[i % colors.length];
                 ctx.globalAlpha = highlightIndex === i ? 0.92 : 0.85;
                 ctx.shadowColor = "#000";
@@ -168,7 +181,7 @@
                 ctx.fill();
                 ctx.restore();
 
-                // Draw border
+                // Give each slice a stylish border, because fashion matters
                 ctx.save();
                 ctx.beginPath();
                 ctx.moveTo(radius, radius);
@@ -179,15 +192,17 @@
                 ctx.stroke();
                 ctx.restore();
 
-                // Draw text
+                // Time to label the slices, because anonymity is overrated
                 ctx.save();
                 ctx.translate(radius, radius);
+                // Rotate so the text doesn't get dizzy
                 ctx.rotate(angleOffset + (i + 0.5) * anglePer);
                 ctx.textAlign = "right";
                 ctx.font = "bold 1.1em Segoe UI, Arial";
                 ctx.fillStyle = "#23262f";
                 ctx.shadowColor = "#fff8";
                 ctx.shadowBlur = 2;
+                // Place the name just far enough from the center to avoid existential crises
                 ctx.fillText(names[i], radius - 32, 8);
                 ctx.restore();
             }
@@ -196,40 +211,52 @@
         // Spin logic
         function spinWheel(names, callback) {
             const n = names.length;
+            // Each slice gets its slice of the action
             const anglePer = 2 * Math.PI / n;
+
+            // The RNG gods decide your fate (totally not rigged, wink)
             const winnerIndex = Math.floor(Math.random() * n);
+            // How many times do we want to make you dizzy before stopping?
             const extraSpins = 5;
+            // Calculate the final angle so the winner lands under the pointer (math magic)
             const finalAngle = (3 * Math.PI / 2) - (winnerIndex + 0.5) * anglePer;
+            // Total rotation = extra spins + dramatic finish
             const totalRotation = extraSpins * 2 * Math.PI + finalAngle;
             let start = null;
+            // Duration is just long enough to build suspense (and maybe annoy you)
             let duration = 3200 + Math.random() * 600;
-            let lastAngle = 0;
 
             function animate(ts) {
                 if (!start) start = ts;
                 const elapsed = ts - start;
+                // t goes from 0 (start) to 1 (end), like your patience
                 const t = Math.min(elapsed / duration, 1);
-                // Ease out cubic
+                // Ease out cubic, because linear is for boring people
                 const ease = 1 - Math.pow(1 - t, 3);
+                // Spin that wheel, baby!
                 const angle = ease * totalRotation;
                 drawWheel(names, angle, null);
-                lastAngle = angle;
                 if (t < 1) {
+                    // Keep spinning, keep winning (or not)
                     requestAnimationFrame(animate);
                 } else {
+                    // Winner winner, chicken dinner!
                     drawWheel(names, angle, winnerIndex);
                     callback(winnerIndex);
                 }
             }
+            // Let the games begin
             requestAnimationFrame(animate);
         }
 
         // Main
         const names = getNamesFromQuery();
         if (names.length === 0) {
+            // No names? No fun. Here's a passive-aggressive hint.
             document.getElementById('namesList').innerHTML = '<span style="color:#f76d1a;">No names provided.<br>Use <b>?names=Alice,Bob,Charlie</b> in the URL.</span>';
             document.getElementById('spinBtn').disabled = true;
         } else {
+            // Show off the contestants and draw the wheel of fate
             displayNames(names);
             drawWheel(names);
         }
@@ -237,23 +264,26 @@
         let spinning = false;
         let disclaimerTimeout = null;
         document.getElementById('spinBtn').addEventListener('click', function () {
+            // No double spins or spinning with no names—rules are rules
             if (spinning || names.length === 0) return;
             spinning = true;
+            // Clear out last week's champion
             document.getElementById('winner').textContent = '';
             spinWheel(names, function (winnerIndex) {
                 spinning = false;
+                // Announce the winner with all the fanfare of a JavaScript alert (but prettier)
                 document.getElementById('winner').textContent = `🎉 ${names[winnerIndex]} wins the Spinner of DOOM! See you next week!`;
-                // Update disclaimer with winner's name, on next line
+                // Update the disclaimer with a totally unbiased note
                 document.getElementById('biasNote').textContent = `I promise it's definitely not biased towards ${names[winnerIndex]}`;
             });
-            // Hide disclaimer and show after 5 seconds with fade-in
+            // Hide the disclaimer, then bring it back like a plot twist after 5 seconds
             const disclaimer = document.getElementById('disclaimer');
             disclaimer.style.display = 'none';
             disclaimer.style.opacity = 0;
             if (disclaimerTimeout) clearTimeout(disclaimerTimeout);
             disclaimerTimeout = setTimeout(function() {
                 disclaimer.style.display = 'block';
-                // Force reflow for transition
+                // Force reflow because CSS is needy
                 void disclaimer.offsetWidth;
                 disclaimer.style.opacity = 1;
             }, 5000);

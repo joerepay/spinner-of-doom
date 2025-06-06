@@ -125,7 +125,7 @@
         function getNamesFromQuery() {
             const params = new URLSearchParams(window.location.search);
             const names = params.get('names');
-            if (!names) return ["Specify", "Names", "In", "Querystring", "Called", "Names"];
+            if (!names) return [];
             return names.split(',').map(n => n.trim()).filter(n => n.length > 0);
         }
 
